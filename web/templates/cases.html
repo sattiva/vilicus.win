@@ -1,0 +1,93 @@
+{{define "content"}}
+<div class="page-header">
+    <h1>Moderation Cases</h1>
+</div>
+
+{{if .GuildSummaries}}
+<div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom: 1.5rem;">
+    {{range .GuildSummaries}}
+    <a href="/cases?guild={{.ID}}" class="tab-link {{if eq .ID $.SelectedGuild}}active{{end}}" style="text-decoration:none; padding:6px 14px; border-radius:8px;">{{.Name}} ({{.N}})</a>
+    {{end}}
+</div>
+
+<form method="GET" action="/cases" style="margin-bottom: 1rem; display:flex; gap:8px;">
+    <input type="hidden" name="guild" value="{{.SelectedGuild}}">
+    <input type="text" name="q" value="{{.Query}}" placeholder="Full-text search reasons and notes (e.g. raid)"
+           style="flex:0 1 340px; background: var(--card-inner); border:1px solid var(--border); border-radius:8px; color:var(--fg); padding:8px 12px; font-size:13px;">
+    <input type="text" name="target" value="{{.Target}}" placeholder="Filter by target user ID (optional)"
+           style="flex:0 1 300px; background: var(--card-inner); border:1px solid var(--border); border-radius:8px; color:var(--fg); padding:8px 12px; font-size:13px;">
+    <button type="submit" class="btn">Search</button>
+</form>
+
+{{if .Query}}
+<div class="table-wrap" style="margin-bottom:1.5rem;">
+    <div style="padding:12px 18px;" class="card-label">Search results for "{{.Query}}" (reasons + note bodies, all guilds)</div>
+    <table>
+        <thead>
+            <tr><th>Case</th><th>Guild</th><th>Type</th><th>Target</th><th>Match</th><th>Source</th></tr>
+        </thead>
+        <tbody>
+            {{range .Hits}}
+            <tr>
+                <td><a href="/cases/view?guild={{.GuildID}}&no={{.CaseNo}}" style="color:var(--fg);">#{{.CaseNo}}</a></td>
+                <td>{{.GuildID}}</td>
+                <td>{{.Type}}</td>
+                <td>{{.TargetID}}</td>
+                <td>{{.Snippet}}</td>
+                <td><span class="badge">{{.Src}}</span></td>
+            </tr>
+            {{else}}
+            <tr><td colspan="6" style="text-align:center; color:var(--muted); padding:1.5rem;">No matches.</td></tr>
+            {{end}}
+        </tbody>
+    </table>
+</div>
+{{end}}
+
+<div class="table-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>Case</th>
+                <th>Type</th>
+                <th>Target</th>
+                <th>Moderator</th>
+                <th>Reason</th>
+                <th>Status</th>
+                <th>Created</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{$gid := .SelectedGuild}}
+            {{range .Cases}}
+            <tr>
+                <td><a href="/cases/view?guild={{$gid}}&no={{.CaseNo}}" style="color:var(--fg);">#{{.CaseNo}}</a></td>
+                <td>{{.Type}}</td>
+                <td>{{.TargetID}}</td>
+                <td>{{.ModeratorID}}</td>
+                <td>{{if .Reason}}{{truncate .Reason 60}}{{else}}-{{end}}</td>
+                <td>
+                    <span class="badge {{if .Active}}badge-success{{else}}badge-error{{end}}">{{if .Active}}active{{else}}inactive{{end}}</span>
+                </td>
+                <td>{{.CreatedAt.Format "2006-01-02 15:04"}}</td>
+            </tr>
+            {{else}}
+            <tr>
+                <td colspan="7" style="text-align: center; color: var(--muted); padding: 2rem;">No cases recorded for this server.</td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+</div>
+
+<div style="display:flex; gap:12px; margin-top:1rem;">
+    {{if .HasPrev}}<a href="/cases?guild={{.SelectedGuild}}&target={{.Target}}&page={{sub .Page 1}}" class="tab-link" style="text-decoration:none; padding:6px 14px; border-radius:8px;">Previous</a>{{end}}
+    {{if .HasNext}}<a href="/cases?guild={{.SelectedGuild}}&target={{.Target}}&page={{add .Page 1}}" class="tab-link" style="text-decoration:none; padding:6px 14px; border-radius:8px;">Next</a>{{end}}
+    <span style="color:var(--muted); font-size:12px; align-self:center;">Page {{.Page}} - {{.Total}} matching cases</span>
+</div>
+{{else}}
+<div class="card" style="padding:2rem; text-align:center; color:var(--muted);">
+    No moderation cases exist yet. Cases are created by warn, ban, kick, timeout, tempban, and temprole commands.
+</div>
+{{end}}
+{{end}}

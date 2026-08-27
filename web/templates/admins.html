@@ -1,0 +1,152 @@
+{{define "content"}}
+<div class="page-header">
+    <h1>Administrator Access</h1>
+</div>
+
+{{if .Msg}}
+<div class="msg-box">{{.Msg}}</div>
+{{end}}
+
+{{if not .IsSuper}}
+<p style="color:var(--muted); font-size:13px;">Read-only view. Only superadmins manage access.</p>
+{{end}}
+
+<div class="table-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>Discord User ID</th>
+                <th>Username</th>
+                <th>Role</th>
+                <th>Added</th>
+                {{if .IsSuper}}<th>Actions</th>{{end}}
+            </tr>
+        </thead>
+        <tbody>
+            {{range .Admins}}
+            <tr>
+                <td>{{.DiscordUserID}}</td>
+                <td>{{.Username}}</td>
+                <td>
+                    {{if eq .Role "superadmin"}}<span class="badge badge-warning">superadmin</span>
+                    {{else if eq .Role "viewer"}}<span class="badge">viewer</span>
+                    {{else}}<span class="badge badge-success">admin</span>{{end}}
+                </td>
+                <td>{{.AddedAt.Format "2006-01-02 15:04:05"}}</td>
+                {{if $.IsSuper}}
+                <td>
+                    <form method="POST" action="/admins/role" style="display:inline-flex; gap:6px; align-items:center;">
+                        <input type="hidden" name="csrf_token" value="{{index $.CSRF "admins_role"}}">
+                        <input type="hidden" name="discord_user_id" value="{{.DiscordUserID}}">
+                        <select name="role">
+                            <option value="viewer" {{if eq .Role "viewer"}}selected{{end}}>viewer</option>
+                            <option value="admin" {{if or (eq .Role "admin") (not .Role)}}selected{{end}}>admin</option>
+                            <option value="superadmin" {{if eq .Role "superadmin"}}selected{{end}}>superadmin</option>
+                        </select>
+                        <button type="submit" class="btn btn-sm">Set</button>
+                    </form>
+                    <form method="POST" action="/admins/delete" style="display:inline;">
+                        <input type="hidden" name="csrf_token" value="{{index $.CSRF "admins_delete"}}">
+                        <input type="hidden" name="discord_user_id" value="{{.DiscordUserID}}">
+                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Revoke all dashboard access?')">Revoke</button>
+                    </form>
+                </td>
+                {{end}}
+            </tr>
+            {{else}}
+            <tr>
+                <td colspan="5" style="text-align: center; color: var(--muted); padding: 2rem;">No persistent administrators in database.</td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+</div>
+
+<div class="card" style="max-width: 480px; margin-top:1.5rem; {{if not .IsSuper}}display:none;{{end}}">
+    <div class="card-label" style="margin-bottom: 1.25rem; font-size: 13px;">Grant Dashboard Access</div>
+    <form method="POST" action="/admins">
+        <input type="hidden" name="csrf_token" value="{{index .CSRF "admins_add"}}">
+        <div class="form-group">
+            <label>Discord User ID</label>
+            <input type="text" name="discord_user_id" required>
+        </div>
+        <div class="form-group">
+            <label>Username / Note</label>
+            <input type="text" name="username" required>
+        </div>
+        <div class="form-group">
+            <label>Role Tier</label>
+            <select name="role">
+                <option value="viewer">viewer  -  read-only dashboards</option>
+                <option value="admin" selected>admin  -  manages assigned guilds</option>
+                <option value="superadmin">superadmin  -  full control</option>
+            </select>
+        </div>
+        <button type="submit" class="btn">Add Administrator</button>
+    </form>
+</div>
+
+<div class="card" style="margin-top:1.5rem; {{if not .IsSuper}}display:none;{{end}}">
+    <div class="card-label" style="margin-bottom: 1.25rem; font-size: 13px;">Guild Access Assignments</div>
+    <p style="color:var(--muted); font-size:12px; margin-top:-0.5rem;">
+        Plain admins may only act on guilds assigned here. Superadmins implicitly hold every guild.
+    </p>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr><th>User</th><th>Guild</th><th>Granted By</th><th>Granted At</th><th></th></tr>
+            </thead>
+            <tbody>
+                {{range .Assignments}}
+                <tr>
+                    <td>{{.DiscordUserID}}</td>
+                    <td>{{.GuildID}}</td>
+                    <td>{{if .GrantedBy}}{{.GrantedBy}}{{else}}-{{end}}</td>
+                    <td>{{.GrantedAt.Format "2006-01-02 15:04"}}</td>
+                    <td>
+                        <form method="POST" action="/admins/guilds/revoke" style="display:inline;">
+                            <input type="hidden" name="csrf_token" value="{{index $.CSRF "guild_admin_revoke"}}">
+                            <input type="hidden" name="discord_user_id" value="{{.DiscordUserID}}">
+                            <input type="hidden" name="guild_id" value="{{.GuildID}}">
+                            <button type="submit" class="btn btn-sm btn-danger">Revoke</button>
+                        </form>
+                    </td>
+                </tr>
+                {{else}}
+                <tr><td colspan="5" style="text-align:center; color:var(--muted); padding:1.5rem;">No scoped assignments. Plain admins can currently manage nothing until granted a guild.</td></tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+
+    <form method="POST" action="/admins/guilds/grant" style="margin-top:1.25rem; display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;">
+        <input type="hidden" name="csrf_token" value="{{index .CSRF "guild_admin_grant"}}">
+        <div class="form-group" style="margin-bottom:0;">
+            <label>Admin Discord User ID</label>
+            <input type="text" name="discord_user_id" required>
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+            <label>Guild</label>
+            <select name="guild_id" required>
+                {{if .Guilds}}{{range .Guilds}}<option value="{{.ID}}">{{.Name}}</option>{{end}}
+                {{else}}<option value="">(no known guilds)</option>{{end}}
+            </select>
+        </div>
+        <button type="submit" class="btn">Grant</button>
+    </form>
+</div>
+
+{{if .IsSuper}}
+<div class="card" style="margin-top:1.5rem; border-color:#7f1d1d;">
+    <div class="card-label" style="margin-bottom: 0.75rem; font-size: 13px;">Emergency Kill Switch</div>
+    <p style="color:var(--muted); font-size:12px; margin-top:-0.5rem;">
+        Destroys every dashboard session immediately, including yours  -  the standard first move on a
+        suspected panel compromise. All operators must log in again.
+    </p>
+    <form method="POST" action="/admins/logoutall" style="display:inline;">
+        <input type="hidden" name="csrf_token" value="{{index .CSRF "logout_all"}}">
+        <button type="submit" class="btn btn-danger" onclick="return confirm('Log out ALL devices, including this one?')">Log out all devices</button>
+    </form>
+</div>
+{{end}}
+{{end}}

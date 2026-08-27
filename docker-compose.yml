@@ -1,0 +1,29 @@
+services:
+  vilicus:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+      - ./backups:/app/backups
+      # Static assets are baked into the image (web/static); no bind mount so
+      # a read_only rootfs stays possible.
+    env_file:
+      - .env
+    # Container profile: immutable rootfs, zero caps,
+    # no privilege escalation. /tmp is the only writable scratch the Go
+    # runtime and SQLite temp store might touch.
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 3s
+      start_period: 10s
+      retries: 3

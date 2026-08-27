@@ -1,0 +1,156 @@
+{{define "content"}}
+<div class="page-header">
+    <h1>Remote Operations Console</h1>
+</div>
+
+{{if .Result}}
+<div class="{{if .Success}}msg-box{{else}}card{{end}}" style="{{if not .Success}}background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.3); color: #f87171; margin-bottom: 1.5rem; padding: 12px 18px;{{end}}">
+    {{.Result}}
+</div>
+{{end}}
+
+{{if .BotReady}}{{else}}
+<div class="card" style="border-color:rgba(245,158,11,0.4); margin-bottom:1.5rem; color:#fbbf24; font-size:13px;">
+    Bot gateway offline  -  console actions are disabled until the gateway reconnects.
+</div>
+{{end}}
+
+{{if .Stage}}
+<div class="card" style="border-color:rgba(245,158,11,0.4); margin-bottom:1.5rem;">
+    <div class="card-label" style="margin-bottom:1rem; color:#fbbf24;">Confirm destructive action (step 2 of 2)</div>
+    <table style="max-width:640px;">
+        <tbody>
+            <tr><td>Action</td><td>{{.Stage.Action}}</td></tr>
+            <tr><td>Guild</td><td>{{.Stage.GuildID}}</td></tr>
+            {{with .Stage.Target}}
+            <tr><td>Target</td><td>{{if .Name}}{{.Name}} <span style="color:var(--muted);">({{.UserID}})</span>{{else}}{{.UserID}}{{end}}
+                {{if .Bot}}<span class="badge">bot</span>{{end}}
+                {{if .NotMember}}<span class="badge badge-warning">not a member</span>{{end}}</td></tr>
+            {{if .JoinedAt}}<tr><td>Joined</td><td>{{.JoinedAt}}</td></tr>{{end}}
+            {{if .RoleCount}}<tr><td>Roles</td><td>{{.RoleCount}}</td></tr>{{end}}
+            {{if .CaseCount}}<tr><td>Prior cases</td><td>{{.CaseCount}}</td></tr>{{end}}
+            {{end}}
+            <tr><td>Reason</td><td>{{.Stage.Reason}}</td></tr>
+            <tr><td>Token expires</td><td>{{.Stage.ExpiresAt}} (single-use)</td></tr>
+        </tbody>
+    </table>
+    <form method="POST" action="/console/exec" style="margin-top:1.25rem;">
+        <input type="hidden" name="csrf_token" value="{{index .CSRF "console_exec"}}">
+        <input type="hidden" name="action" value="{{.Stage.Action}}">
+        <input type="hidden" name="guild_id" value="{{.Stage.GuildID}}">
+        <input type="hidden" name="user_id" value="{{.Stage.UserID}}">
+        <input type="hidden" name="reason" value="{{.Stage.Reason}}">
+        <input type="hidden" name="confirm_token" value="{{.Stage.Token}}">
+        <input type="hidden" name="confirm_nonce" value="{{.Stage.Nonce}}">
+        <button type="submit" class="btn btn-danger">Execute now</button>
+        <a href="/console" class="btn btn-sm" style="background:rgba(255,255,255,0.06); color:var(--muted);">Cancel</a>
+    </form>
+</div>
+{{end}}
+
+<div class="grid-stats" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); margin-bottom: 2rem;">
+    <div class="card">
+        <div class="card-label" style="margin-bottom: 1.25rem; font-size: 13px;">Execute Remote Action</div>
+        <form method="POST" action="/console/exec">
+            <input type="hidden" name="csrf_token" value="{{index .CSRF "console_exec"}}">
+            <div class="form-group">
+                <label>Action</label>
+                <select name="action" id="console_action" onchange="updateConsoleFields()">
+                    <option value="ban">Ban User ID</option>
+                    <option value="unban">Unban User ID</option>
+                    <option value="kick">Kick User ID</option>
+                    <option value="lookup_user">Lookup User Profile</option>
+                    <option value="send_message">Send Channel Message (Components V2)</option>
+                </select>
+            </div>
+            <div class="form-group" id="field_guild">
+                <label>Target Guild</label>
+                <select name="guild_id">
+                    <option value="">Select Connected Guild</option>
+                    {{range .Guilds}}
+                    <option value="{{.ID}}">{{.Name}} ({{.ID}})</option>
+                    {{end}}
+                </select>
+            </div>
+            <div class="form-group" id="field_user">
+                <label>Target User ID</label>
+                <input type="text" name="user_id" placeholder="Discord User ID">
+            </div>
+            <div class="form-group" id="field_channel" style="display:none;">
+                <label>Target Channel ID</label>
+                <input type="text" name="channel_id" placeholder="Discord Channel ID">
+            </div>
+            <div class="form-group" id="field_reason">
+                <label>Action Reason / Audit Note <span id="reason_required_marker" style="color:#f87171;">(required for ban / kick / unban  -  a confirmation step follows)</span></label>
+                <input type="text" name="reason" placeholder="Administrative Reason">
+            </div>
+            <div class="form-group" id="field_payload" style="display:none;">
+                <label>Message Content</label>
+                <input type="text" name="payload" placeholder="Message to dispatch inside Container">
+            </div>
+            <button type="submit" class="btn">Execute Action</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <div class="card-label" style="margin-bottom: 1.25rem; font-size: 13px;">Fast User Lookup</div>
+        <form method="POST" action="/console/exec">
+            <input type="hidden" name="csrf_token" value="{{index .CSRF "console_exec"}}">
+            <input type="hidden" name="action" value="lookup_user">
+            <div class="form-group">
+                <label>Discord User ID</label>
+                <input type="text" name="user_id" placeholder="Paste User ID" required>
+            </div>
+            <button type="submit" class="btn">Inspect Account</button>
+        </form>
+
+        <div style="margin-top: 2rem; border-top: 1px solid var(--border); padding-top: 1.25rem;">
+            <div class="card-label" style="font-size: 11px; margin-bottom: 8px;">Direct API Capabilities</div>
+            <ul style="list-style: none; font-size: 12.5px; color: var(--muted); font-family: var(--font-mono); line-height: 1.8;">
+                <li>- Cross-server Ban/Unban execution</li>
+                <li>- Global User Banner & Avatar extraction</li>
+                <li>- Instant Components V2 Webhook/Channel dispatch</li>
+                <li>- Full audit log persistence in SQLite</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<script>
+function updateConsoleFields() {
+    var act = document.getElementById('console_action').value;
+    var fieldGuild = document.getElementById('field_guild');
+    var fieldUser = document.getElementById('field_user');
+    var fieldChannel = document.getElementById('field_channel');
+    var fieldReason = document.getElementById('field_reason');
+    var fieldPayload = document.getElementById('field_payload');
+    var marker = document.getElementById('reason_required_marker');
+
+    var destructive = (act === 'ban' || act === 'kick' || act === 'unban');
+
+    if (act === 'send_message') {
+        fieldGuild.style.display = 'none';
+        fieldUser.style.display = 'none';
+        fieldReason.style.display = 'none';
+        marker.style.display = 'none';
+        fieldChannel.style.display = 'block';
+        fieldPayload.style.display = 'block';
+    } else if (act === 'lookup_user') {
+        fieldGuild.style.display = 'none';
+        fieldUser.style.display = 'block';
+        fieldReason.style.display = 'none';
+        marker.style.display = 'none';
+        fieldChannel.style.display = 'none';
+        fieldPayload.style.display = 'none';
+    } else {
+        fieldGuild.style.display = 'block';
+        fieldUser.style.display = 'block';
+        fieldReason.style.display = 'block';
+        marker.style.display = destructive ? 'inline' : 'none';
+
+        fieldChannel.style.display = 'none';
+        fieldPayload.style.display = 'none';
+    }
+}
+</script>
+{{end}}

@@ -1,0 +1,83 @@
+{{define "content"}}
+<div class="page-header">
+    <h1>System Overview</h1>
+    <div class="badge {{if eq .Status "Online"}}badge-success{{else}}badge-error{{end}}">{{.Status}}</div>
+</div>
+
+<div class="grid-stats">
+    <div class="card">
+        <div class="card-label">Gateway Status</div>
+        <div class="card-value">{{.Status}}</div>
+    </div>
+    <div class="card">
+        <div class="card-label">System Uptime</div>
+        <div class="card-value">{{.Uptime}}</div>
+    </div>
+    <div class="card">
+        <div class="card-label">Heartbeat Latency</div>
+        <div class="card-value">{{.Latency}} ms</div>
+    </div>
+    <div class="card">
+        <div class="card-label">Active Guilds</div>
+        <div class="card-value">{{.GuildCount}}</div>
+    </div>
+</div>
+
+<div class="grid-stats">
+    <div class="card">
+        <div class="card-label">Memory (Alloc / Sys)</div>
+        <div class="card-value">{{.AllocMB}} / {{.SysMB}} MB</div>
+    </div>
+    <div class="card">
+        <div class="card-label">Active Goroutines</div>
+        <div class="card-value">{{.Goroutines}}</div>
+    </div>
+    <div class="card">
+        <div class="card-label">Total Command Runs</div>
+        <div class="card-value">{{.TotalCommands}}</div>
+    </div>
+    <div class="card">
+        <div class="card-label">SQLite Pool Max</div>
+        <div class="card-value">{{.DBConns}}</div>
+    </div>
+</div>
+
+<div class="page-header" style="margin-top: 2.5rem;">
+    <h1>Recent Command Activity</h1>
+</div>
+
+<div class="table-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Command</th>
+                <th>Guild ID</th>
+                <th>User ID</th>
+                <th>Status</th>
+                <th>Duration</th>
+                <th>Timestamp</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .RecentLogs}}
+            <tr>
+                <td>#{{.ID}}</td>
+                <td>/{{.CommandName}}</td>
+                <td>{{if .GuildID}}{{.GuildID}}{{else}}DM{{end}}</td>
+                <td>{{.UserID}}</td>
+                <td>
+                    <span class="badge {{if eq .Status "success"}}badge-success{{else}}badge-error{{end}}">{{.Status}}</span>
+                </td>
+                <td>{{.ExecutionMS}} ms</td>
+                <td>{{.CreatedAt.Format "2006-01-02 15:04:05"}}</td>
+            </tr>
+            {{else}}
+            <tr>
+                <td colspan="7" style="text-align: center; color: var(--muted); padding: 2rem;">No command executions logged yet.</td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+</div>
+{{end}}

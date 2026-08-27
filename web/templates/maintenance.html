@@ -1,0 +1,74 @@
+{{define "content"}}
+<div class="page-header">
+    <h1>Maintenance</h1>
+</div>
+
+{{if .Msg}}
+<div class="msg-box" {{if .Failed}}style="background:rgba(239,68,68,0.12); border-color:rgba(239,68,68,0.25); color:#f87171;"{{end}}>{{.Msg}}</div>
+{{end}}
+
+<div class="card" style="margin-bottom: 1.5rem;">
+    <div class="card-label" style="margin-bottom: 1.25rem; font-size: 13px;">Database Backups ({{.BackupDir}})</div>
+    <p style="color:var(--muted); font-size:12px;">
+        Nightly verified hot copies run automatically (keep 7 daily + 4 weekly). Each copy is
+        integrity-checked before it counts as a backup; failed copies are deleted.
+    </p>
+    <div class="table-wrap" style="margin-top:1rem;">
+        <table>
+            <thead>
+                <tr><th>File</th><th>Size</th><th>Created</th></tr>
+            </thead>
+            <tbody>
+                {{range .Backups}}
+                <tr>
+                    <td>{{.Name}}</td>
+                    <td>{{.Size}}</td>
+                    <td>{{.ModifiedAt}}</td>
+                </tr>
+                {{else}}
+                <tr><td colspan="3" style="text-align:center; color:var(--muted); padding:1.5rem;">No backups yet.</td></tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+    <form method="POST" action="/maintenance/backup" style="margin-top:1rem;">
+        <input type="hidden" name="csrf_token" value="{{index .CSRF "maintenance_backup"}}">
+        <button type="submit" class="btn">Backup Now</button>
+    </form>
+</div>
+
+<div class="card">
+    <div class="card-label" style="margin-bottom: 1.25rem; font-size: 13px;">Housekeeping</div>
+    <p style="color:var(--muted); font-size:12px;">
+        Retention in effect: usage logs {{.RetentionUsage}} days, audit trails {{.RetentionAudit}} days.
+        Prune deletes aged rows now; VACUUM rebuilds the database file and briefly blocks writes.
+    </p>
+    <div style="display:flex; gap:10px; margin-top:1.25rem; flex-wrap:wrap;">
+        <form method="POST" action="/maintenance/prune">
+            <input type="hidden" name="csrf_token" value="{{index .CSRF "maintenance_prune"}}">
+            <button type="submit" class="btn">Prune Now</button>
+        </form>
+        <form method="POST" action="/maintenance/vacuum">
+            <input type="hidden" name="csrf_token" value="{{index .CSRF "maintenance_vacuum"}}">
+            <button type="submit" class="btn btn-danger">Vacuum Now</button>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-label" style="margin-bottom: 1.25rem; font-size: 13px;">Case Archive</div>
+    <p style="color:var(--muted); font-size:12px;">
+        Cases are never auto-deleted. This exports every case older than the threshold
+        (with its notes) to a compressed file in {{.BackupDir}}, then removes those rows.
+        The archive is written before anything is deleted; if the step fails midway,
+        re-running duplicates rows into a new file rather than losing data.
+    </p>
+    <form method="POST" action="/maintenance/archive" style="display:flex; gap:8px; align-items:center; margin-top:1.25rem;">
+        <input type="hidden" name="csrf_token" value="{{index .CSRF "maintenance_archive"}}">
+        <label style="font-size:13px;">Older than</label>
+        <input type="number" name="years" min="1" max="20" value="2" required style="width:70px;">
+        <label style="font-size:13px;">years</label>
+        <button type="submit" class="btn btn-danger" onclick="return confirm('Export and DELETE all cases older than the threshold?')">Archive Old Cases</button>
+    </form>
+</div>
+{{end}}

@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}} - {{.BotName}} Control Center</title>
+    <script src="/static/htmx.min.js"></script>
+    <style>
+        /* Fonts are vendored under /static/fonts: no
+           fonts.googleapis.com/gstatic.com in the CSP at all. Latin subset;
+           JetBrains Mono ships as a variable file covering 400-600. */
+        @font-face {
+            font-family: 'JetBrains Mono';
+            font-style: normal;
+            font-weight: 400 600;
+            font-display: swap;
+            src: url('/static/fonts/jetbrains-mono-var.woff2') format('woff2');
+        }
+        @font-face {
+            font-family: 'Poppins';
+            font-style: normal;
+            font-weight: 400;
+            font-display: swap;
+            src: url('/static/fonts/poppins-400.woff2') format('woff2');
+        }
+        @font-face {
+            font-family: 'Poppins';
+            font-style: normal;
+            font-weight: 500;
+            font-display: swap;
+            src: url('/static/fonts/poppins-500.woff2') format('woff2');
+        }
+        @font-face {
+            font-family: 'Poppins';
+            font-style: normal;
+            font-weight: 600;
+            font-display: swap;
+            src: url('/static/fonts/poppins-600.woff2') format('woff2');
+        }
+        @font-face {
+            font-family: 'Poppins';
+            font-style: normal;
+            font-weight: 700;
+            font-display: swap;
+            src: url('/static/fonts/poppins-700.woff2') format('woff2');
+        }
+        @font-face {
+            font-family: 'Poppins';
+            font-style: normal;
+            font-weight: 800;
+            font-display: swap;
+            src: url('/static/fonts/poppins-800.woff2') format('woff2');
+        }
+        :root {
+            color-scheme: dark;
+            --bg: #030304;
+            --panel: rgba(14, 14, 18, 0.75);
+            --panel-solid: #0d0d12;
+            --card: rgba(22, 22, 28, 0.7);
+            --card-inner: rgba(12, 12, 16, 0.85);
+            --fg: #f4f4f7;
+            --muted: #888892;
+            --border: rgba(255, 255, 255, 0.08);
+            --border-hover: rgba(255, 255, 255, 0.16);
+            --accent: #5865F2;
+            --accent-hover: #4752C4;
+            --accent-glow: rgba(88, 101, 242, 0.25);
+            --green: #10b981;
+            --red: #ef4444;
+            --font-main: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: var(--bg);
+            color: var(--fg);
+            font-family: var(--font-main);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            font-size: 14px;
+        }
+        .fog-bg {
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            background: var(--bg);
+            overflow: hidden;
+            pointer-events: none;
+        }
+        #bgCanvas {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            image-rendering: pixelated;
+            opacity: 0.85;
+        }
+        .fog-dot-grid-overlay {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            background-image: radial-gradient(circle, transparent 40%, #030304 43%);
+            background-size: 4px 4px;
+        }
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            background: rgba(8, 8, 10, 0.85);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+        }
+        .brand-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--accent);
+            box-shadow: 0 0 10px var(--accent);
+        }
+        .brand-title {
+            font-size: 16px;
+            font-weight: 800;
+            color: #fff;
+            letter-spacing: -0.3px;
+            text-transform: uppercase;
+        }
+        .nav-tabs {
+            display: flex;
+            gap: 6px;
+            background: rgba(20, 20, 26, 0.7);
+            padding: 4px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+        }
+        .tab-link {
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 600;
+            padding: 7px 16px;
+            border-radius: 6px;
+            text-decoration: none;
+            transition: all 0.15s ease;
+        }
+        .tab-link:hover {
+            color: var(--fg);
+        }
+        .tab-link.active {
+            background: rgba(255, 255, 255, 0.08);
+            color: #fff;
+            border: 1px solid var(--border);
+        }
+        .user-block {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .user-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--muted);
+            font-family: var(--font-mono);
+        }
+        .main-container {
+            max-width: 1100px;
+            width: 100%;
+            margin: 2.5rem auto 4rem auto;
+            padding: 0 1.5rem;
+            flex: 1;
+        }
+        .page-header {
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .page-header h1 {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: -0.4px;
+        }
+        .grid-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+        .card {
+            background: var(--panel);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 1.5rem;
+            position: relative;
+            transition: border-color 0.2s ease;
+        }
+        .card:hover {
+            border-color: var(--border-hover);
+        }
+        .card-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 6px;
+        }
+        .card-value {
+            font-size: 22px;
+            font-weight: 700;
+            color: #fff;
+            font-family: var(--font-mono);
+        }
+        .table-wrap {
+            background: var(--panel);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+        th, td {
+            padding: 12px 18px;
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+        }
+        th {
+            background: rgba(255, 255, 255, 0.02);
+            color: var(--muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.05em;
+        }
+        td {
+            font-family: var(--font-mono);
+            font-size: 12.5px;
+        }
+        tr:last-child td {
+            border-bottom: none;
+        }
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.015);
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 16px;
+            background: var(--accent);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            outline: none;
+        }
+        .btn:hover {
+            background: var(--accent-hover);
+            box-shadow: 0 0 15px var(--accent-glow);
+        }
+        .btn-sm {
+            padding: 5px 12px;
+            font-size: 12px;
+            border-radius: 6px;
+        }
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.15);
+            border-color: rgba(239, 68, 68, 0.3);
+            color: #f87171;
+        }
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.3);
+            box-shadow: none;
+        }
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+        label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--muted);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        input[type="text"], input[type="number"], select {
+            width: 100%;
+            padding: 10px 14px;
+            background: var(--card-inner);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 13px;
+            font-family: var(--font-mono);
+            outline: none;
+            transition: border-color 0.15s ease;
+        }
+        input[type="text"]:focus, select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 10px var(--accent-glow);
+        }
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--border);
+            color: var(--muted);
+        }
+        .badge-success {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+        .badge-error {
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+        .badge-warning {
+            background: rgba(245, 158, 11, 0.15);
+            color: #fbbf24;
+            border-color: rgba(245, 158, 11, 0.3);
+        }
+        .msg-box {
+            padding: 12px 18px;
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.25);
+            color: #34d399;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="fog-bg">
+        <canvas id="bgCanvas"></canvas>
+        <div class="fog-dot-grid-overlay"></div>
+    </div>
+
+    <header>
+        <a class="brand" href="/">
+            <div class="brand-dot"></div>
+            <div class="brand-title">{{.BotName}}</div>
+        </a>
+        <nav class="nav-tabs">
+            <a href="/" class="tab-link {{if eq .CurrentNav "overview"}}active{{end}}">Overview</a>
+            <a href="/guilds" class="tab-link {{if eq .CurrentNav "guilds"}}active{{end}}">Guilds</a>
+            <a href="/logs" class="tab-link {{if eq .CurrentNav "logs"}}active{{end}}">Logs</a>
+            <a href="/analytics" class="tab-link {{if eq .CurrentNav "analytics"}}active{{end}}">Analytics</a>
+            <a href="/cases" class="tab-link {{if eq .CurrentNav "cases"}}active{{end}}">Cases</a>
+            <a href="/community" class="tab-link {{if eq .CurrentNav "community"}}active{{end}}">Community</a>
+            <a href="/admins" class="tab-link {{if eq .CurrentNav "admins"}}active{{end}}">Admins</a>
+            <a href="/settings" class="tab-link {{if eq .CurrentNav "settings"}}active{{end}}">Settings</a>
+            <a href="/console" class="tab-link {{if eq .CurrentNav "console"}}active{{end}}">Console</a>
+            {{if .IsSuper}}<a href="/maintenance" class="tab-link {{if eq .CurrentNav "maintenance"}}active{{end}}">Maintenance</a>{{end}}
+        </nav>
+        <div class="user-block">
+            <span class="user-name">{{.User.Username}}</span>
+            <a href="/auth/logout" class="btn btn-sm btn-danger">Logout</a>
+        </div>
+    </header>
+
+    <div class="main-container">
+        {{template "content" .}}
+    </div>
+
+    <script>
+    (function() {
+        var canvas = document.getElementById('bgCanvas');
+        if (!canvas) return;
+        var ctx = canvas.getContext('2d');
+        var w, h, particles = [];
+
+        function resize() {
+            w = canvas.width = window.innerWidth / 2;
+            h = canvas.height = window.innerHeight / 2;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        for (var i = 0; i < 40; i++) {
+            particles.push({
+                x: Math.random() * w,
+                y: Math.random() * h,
+                vx: (Math.random() - 0.5) * 0.3,
+                vy: (Math.random() - 0.5) * 0.3,
+                r: Math.random() * 2 + 1
+            });
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, w, h);
+            ctx.fillStyle = "rgba(88, 101, 242, 0.25)";
+            for (var i = 0; i < particles.length; i++) {
+                var p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                if (p.x < 0) p.x = w;
+                if (p.x > w) p.x = 0;
+                if (p.y < 0) p.y = h;
+                if (p.y > h) p.y = 0;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            requestAnimationFrame(draw);
+        }
+        draw();
+    })();
+    </script>
+</body>
+</html>

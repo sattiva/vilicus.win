@@ -1,0 +1,94 @@
+{{define "content"}}
+<div class="page-header">
+    <h1>Case Detail</h1>
+</div>
+
+{{$gid := .GuildID}}
+
+{{if .MissingNo}}
+<div class="card" style="padding:2rem; text-align:center; color:var(--muted);">
+    No case #{{.MissingNo}} found in the selected server.
+    <div style="margin-top:1rem;"><a href="/cases" class="tab-link" style="text-decoration:none;">Back to cases</a></div>
+</div>
+{{else}}
+
+<div class="card" style="padding:1.5rem; margin-bottom: 1.5rem;">
+    <div class="card-label" style="margin-bottom:1rem; font-size:13px;">
+        Case #{{.Case.CaseNo}} - {{.Case.Type}}
+        <span class="badge {{if .Case.Active}}badge-success{{else}}badge-error{{end}}" style="margin-left:8px;">
+            {{if .Case.Active}}active{{else}}inactive{{end}}
+        </span>
+    </div>
+
+    {{if .Deactivated}}
+    <div class="msg-box" style="margin-bottom:1rem;">Case deactivated.</div>
+    {{end}}
+    {{if .SavedNote}}
+    <div class="msg-box" style="margin-bottom:1rem;">Note added.</div>
+    {{end}}
+
+    <ul style="list-style:none; font-size:13.5px; line-height:2; color:var(--fg); font-family:var(--font-mono);">
+        <li><span style="color:var(--muted);">Server:</span> {{.GuildName}}</li>
+        <li><span style="color:var(--muted);">Target:</span> {{.Case.TargetID}}</li>
+        <li><span style="color:var(--muted);">Moderator:</span> {{.Case.ModeratorID}}</li>
+        <li><span style="color:var(--muted);">Reason:</span> {{.Case.Reason}}</li>
+        {{if gt .Case.DurationSeconds 0}}
+        <li><span style="color:var(--muted);">Duration:</span> {{.Case.DurationSeconds}}s</li>
+        {{end}}
+        {{if .Case.ExpiresAt}}
+        <li><span style="color:var(--muted);">Expires:</span> {{.Case.ExpiresAt.Format "2006-01-02 15:04:05"}}</li>
+        {{end}}
+        <li><span style="color:var(--muted);">Created:</span> {{.Case.CreatedAt.Format "2006-01-02 15:04:05"}} UTC</li>
+        <li><span style="color:var(--muted);">Source:</span> {{.Case.ActorKind}}{{if .Case.ReqID}} (req {{.Case.ReqID}}){{end}}</li>
+    </ul>
+</div>
+
+<div class="grid-stats" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));">
+    <div class="card" style="padding:1.5rem;">
+        <div class="card-label" style="margin-bottom:1rem; font-size:13px;">Staff Notes ({{len .Notes}})</div>
+        {{range .Notes}}
+        <div style="border-bottom:1px solid var(--border); padding:10px 0; font-size:12.5px; font-family:var(--font-mono);">
+            <div style="color:var(--muted); margin-bottom:4px;">{{.AuthorID}} - {{.CreatedAt.Format "2006-01-02 15:04"}}</div>
+            {{.Body}}
+        </div>
+        {{else}}
+        <div style="color:var(--muted); font-size:12.5px;">No notes on this case yet.</div>
+        {{end}}
+
+        <form method="POST" action="/cases/note" style="margin-top:1.25rem;">
+            <input type="hidden" name="csrf_token" value="{{index .CSRF "cases_note"}}">
+            <input type="hidden" name="guild" value="{{$gid}}">
+            <input type="hidden" name="number" value="{{.Case.CaseNo}}">
+            <div class="form-group">
+                <label>Add Note</label>
+                <textarea name="note" rows="3" required
+                          style="width:100%; background: var(--card-inner); border:1px solid var(--border); border-radius:8px; color:var(--fg); padding:8px 12px; font-size:13px; resize:vertical;"></textarea>
+            </div>
+            <button type="submit" class="btn">Append Note</button>
+        </form>
+    </div>
+
+    <div class="card" style="padding:1.5rem;">
+        <div class="card-label" style="margin-bottom:1rem; font-size:13px;">Actions</div>
+        {{if .Case.Active}}
+        <form method="POST" action="/cases/deactivate" onsubmit="return confirm('Deactivate case #{{.Case.CaseNo}}?');">
+            <input type="hidden" name="csrf_token" value="{{index .CSRF "cases_deactivate"}}">
+            <input type="hidden" name="guild" value="{{$gid}}">
+            <input type="hidden" name="number" value="{{.Case.CaseNo}}">
+            <p style="color:var(--muted); font-size:12.5px; margin-bottom:1rem;">
+                Deactivating hides the case from active-status views without deleting history.
+            </p>
+            <button type="submit" class="btn">Deactivate Case</button>
+        </form>
+        {{else}}
+        <div style="color:var(--muted); font-size:12.5px;">This case is already inactive.</div>
+        {{end}}
+
+        <div style="margin-top:2rem; border-top:1px solid var(--border); padding-top:1.25rem;">
+            <a href="/cases?guild={{$gid}}" class="tab-link" style="text-decoration:none;">Back to case list</a>
+        </div>
+    </div>
+</div>
+
+{{end}}
+{{end}}

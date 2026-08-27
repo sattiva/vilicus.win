@@ -1,0 +1,129 @@
+{{define "content"}}
+<div class="page-header">
+    <h1>Analytics</h1>
+    <div style="display:flex; gap:6px;">
+        <a href="/analytics?days=7" class="btn btn-sm" {{if ne .Days "7"}}style="background:rgba(255,255,255,0.06); color:var(--muted);"{{end}}>7d</a>
+        <a href="/analytics?days=30" class="btn btn-sm" {{if ne .Days "30"}}style="background:rgba(255,255,255,0.06); color:var(--muted);"{{end}}>30d</a>
+        <a href="/analytics?days=90" class="btn btn-sm" {{if ne .Days "90"}}style="background:rgba(255,255,255,0.06); color:var(--muted);"{{end}}>90d</a>
+    </div>
+</div>
+
+<div class="grid-stats">
+    <div class="card">
+        <div class="card-label">Commands ({{.Days}}d)</div>
+        <div class="card-value">{{.Summary.Total}}</div>
+    </div>
+    <div class="card">
+        <div class="card-label">Error Rate</div>
+        <div class="card-value">{{.ErrorRate}}%</div>
+        <div style="color:var(--muted); font-size:12px;">{{.Summary.Errors}} failures</div>
+    </div>
+    <div class="card">
+        <div class="card-label">Avg Latency</div>
+        <div class="card-value">{{.AvgLatency}}</div>
+    </div>
+</div>
+
+<div class="card" style="margin-bottom:1.5rem;">
+    <div class="card-label" style="margin-bottom:1rem;">Command Volume by Hour (UTC)</div>
+    {{range .Hours}}
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:4px;">
+        <span style="font-family:var(--font-mono); font-size:11px; color:var(--muted); width:48px;">{{printf "%02d" .Hour}}:00</span>
+        <div style="flex:1; background:rgba(255,255,255,0.03); border-radius:3px; height:14px; position:relative;">
+            {{if gt .Count 0}}
+            <div style="position:absolute; inset:0 auto 0 0; width:{{printf "%.1f" .Pct}}%; background:var(--accent); opacity:0.75; border-radius:3px;"></div>
+            {{end}}
+        </div>
+        <span style="font-family:var(--font-mono); font-size:11px; width:56px; text-align:right; color:var(--fg);">{{.Count}}</span>
+    </div>
+    {{end}}
+</div>
+
+<div class="card" style="margin-bottom:1.5rem;">
+    <div class="card-label" style="margin-bottom:1rem;">Command Latency Histogram ({{.Days}}d)</div>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(110px, 1fr)); gap:10px;">
+        {{with .Histogram}}
+        <div><div style="font-family:var(--font-mono); font-size:11px; color:var(--muted);">&lt;10ms</div><div class="card-value" style="font-size:16px;">{{.Under10}}</div></div>
+        <div><div style="font-family:var(--font-mono); font-size:11px; color:var(--muted);">10-25</div><div class="card-value" style="font-size:16px;">{{.B10_25}}</div></div>
+        <div><div style="font-family:var(--font-mono); font-size:11px; color:var(--muted);">25-50</div><div class="card-value" style="font-size:16px;">{{.B25_50}}</div></div>
+        <div><div style="font-family:var(--font-mono); font-size:11px; color:var(--muted);">50-100</div><div class="card-value" style="font-size:16px;">{{.B50_100}}</div></div>
+        <div><div style="font-family:var(--font-mono); font-size:11px; color:var(--muted);">100-250</div><div class="card-value" style="font-size:16px;">{{.B100_250}}</div></div>
+        <div><div style="font-family:var(--font-mono); font-size:11px; color:var(--muted);">250-500</div><div class="card-value" style="font-size:16px;">{{.B250_500}}</div></div>
+        <div><div style="font-family:var(--font-mono); font-size:11px; color:var(--muted);">0.5-1s</div><div class="card-value" style="font-size:16px;">{{.B500_1000}}</div></div>
+        <div><div style="font-family:var(--font-mono); font-size:11px; color:#f87171;">&gt;1s</div><div class="card-value" style="font-size:16px; {{if gt .Over1000 0}}color:#f87171;{{end}}">{{.Over1000}}</div></div>
+        {{end}}
+    </div>
+</div>
+
+<div class="table-wrap" style="margin-bottom:1.5rem;">
+    <div style="padding:12px 18px;" class="card-label">Runtime Metrics</div>
+    <table>
+        <tbody>
+            {{range .Process}}
+            <tr><td style="width:40%; color:var(--muted);">{{.Label}}</td><td>{{.Value}}</td></tr>
+            {{end}}
+        </tbody>
+    </table>
+</div>
+
+<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:1.25rem; margin-bottom:1.5rem;">
+    <div class="table-wrap" style="margin-bottom:0;">
+        <div style="padding:12px 18px;" class="card-label">Top Commands</div>
+        <table>
+            <tbody>
+                {{range .TopCommands}}
+                <tr><td>{{.Name}}</td><td style="text-align:right;">{{.Count}}</td></tr>
+                {{else}}
+                <tr><td colspan="2" style="text-align:center; color:var(--muted); padding:1.5rem;">No usage in range.</td></tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+    <div class="table-wrap" style="margin-bottom:0;">
+        <div style="padding:12px 18px;" class="card-label">Top Users</div>
+        <table>
+            <tbody>
+                {{range .TopUsers}}
+                <tr><td>{{.Name}}</td><td style="text-align:right;">{{.Count}}</td></tr>
+                {{else}}
+                <tr><td colspan="2" style="text-align:center; color:var(--muted); padding:1.5rem;">No usage in range.</td></tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+    <div class="table-wrap" style="margin-bottom:0;">
+        <div style="padding:12px 18px;" class="card-label">Top Guilds</div>
+        <table>
+            <tbody>
+                {{range .TopGuilds}}
+                <tr><td>{{.Name}}</td><td style="text-align:right;">{{.Count}}</td></tr>
+                {{else}}
+                <tr><td colspan="2" style="text-align:center; color:var(--muted); padding:1.5rem;">No usage in range.</td></tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="table-wrap">
+    <div style="padding:12px 18px;" class="card-label">Dashboard Audit Log (latest 25)</div>
+    <table>
+        <thead>
+            <tr><th>When</th><th>Actor</th><th>Action</th><th>Detail</th><th>IP</th></tr>
+        </thead>
+        <tbody>
+            {{range .Audit}}
+            <tr>
+                <td>{{.CreatedAt.Format "2006-01-02 15:04"}}</td>
+                <td>{{.ActorID}}</td>
+                <td>{{.Action}}</td>
+                <td>{{truncate .Detail 60}}</td>
+                <td>{{if .IP}}{{.IP}}{{else}}-{{end}}</td>
+            </tr>
+            {{else}}
+            <tr><td colspan="5" style="text-align:center; color:var(--muted); padding:1.5rem;">No dashboard mutations recorded.</td></tr>
+            {{end}}
+        </tbody>
+    </table>
+</div>
+{{end}}

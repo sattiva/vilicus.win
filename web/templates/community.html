@@ -1,0 +1,149 @@
+{{define "content"}}
+<div class="page-header">
+    <h1>Community</h1>
+</div>
+
+{{if .GuildTabs}}
+<div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom: 1.5rem;">
+    {{range .GuildTabs}}
+    <a href="/community?guild={{.ID}}" class="tab-link {{if .Current}}active{{end}}" style="text-decoration:none; padding:6px 14px; border-radius:8px;">{{.Name}}</a>
+    {{end}}
+</div>
+{{end}}
+
+{{if .SelectedGuild}}
+
+<div class="card" style="padding:1.25rem 1.5rem; margin-bottom:1.5rem;">
+    <h2 style="margin-top:0;">Starboard</h2>
+    {{if .StarboardCfg}}
+    <p style="color:var(--muted); font-size:13px; margin-bottom:0.75rem;">
+        Channel <code>{{.StarboardCfg.ChannelID}}</code>
+        &middot; Threshold {{.StarboardCfg.Threshold}} stars
+        &middot;
+        <span class="badge {{if .StarboardCfg.Enabled}}badge-success{{else}}badge-error{{end}}">{{if .StarboardCfg.Enabled}}enabled{{else}}disabled{{end}}</span>
+    </p>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr><th>Source Message</th><th>Stars</th><th>Board Post</th></tr>
+            </thead>
+            <tbody>
+                {{$gid := .SelectedGuild}}
+                {{range .StarboardTop}}
+                <tr>
+                    <td><code>{{.SourceID}}</code></td>
+                    <td>{{.Stars}}</td>
+                    <td>{{if .BoardMsgID}}<a href="https://discord.com/channels/{{$gid}}/{{$.StarboardCfg.ChannelID}}/{{.BoardMsgID}}" target="_blank" rel="noopener">open</a>{{else}}-{{end}}</td>
+                </tr>
+                {{else}}
+                <tr><td colspan="3" style="text-align:center; color:var(--muted); padding:1.5rem;">No starred messages yet.</td></tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+    {{else}}
+    <p style="color:var(--muted);">Not configured. Set one up with the starboard command in Discord.</p>
+    {{end}}
+</div>
+
+<div class="card" style="padding:1.25rem 1.5rem; margin-bottom:1.5rem;">
+    <h2 style="margin-top:0;">XP Leaderboard</h2>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr><th>#</th><th>User</th><th>Level</th><th>XP</th></tr>
+            </thead>
+            <tbody>
+                {{range $i, $row := .XPRows}}
+                <tr>
+                    <td>{{add $i 1}}</td>
+                    <td>{{$row.UserID}}</td>
+                    <td>{{$row.Level}}</td>
+                    <td>{{$row.XP}}</td>
+                </tr>
+                {{else}}
+                <tr><td colspan="4" style="text-align:center; color:var(--muted); padding:1.5rem;">No XP recorded yet.</td></tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card" style="padding:1.25rem 1.5rem; margin-bottom:1.5rem;">
+    <h2 style="margin-top:0;">Giveaways</h2>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr><th>Prize</th><th>Winners</th><th>Ends</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+                {{range .Giveaways}}
+                <tr>
+                    <td>{{truncate .Prize 60}}</td>
+                    <td>{{.Winners}}{{if .WinnerIDs}} ({{len .WinnerIDs}} drawn){{end}}</td>
+                    <td>{{.EndsAt.Format "2006-01-02 15:04"}}</td>
+                    <td>
+                        {{if .Drawn}}<span class="badge badge-success">drawn</span>
+                        {{else}}<span class="badge badge-warning">running</span>{{end}}
+                    </td>
+                </tr>
+                {{else}}
+                <tr><td colspan="4" style="text-align:center; color:var(--muted); padding:1.5rem;">No giveaways yet.</td></tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card" style="padding:1.25rem 1.5rem; margin-bottom:1.5rem;">
+    <h2 style="margin-top:0;">Automation Rules</h2>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr><th>Name</th><th>Trigger</th><th>Status</th><th>Last Run</th></tr>
+            </thead>
+            <tbody>
+                {{range .Rules}}
+                <tr>
+                    <td>{{.Name}}</td>
+                    <td>{{.Trigger}}{{if .TriggerArg}}: <code>{{truncate .TriggerArg 40}}</code>{{end}}</td>
+                    <td><span class="badge {{if .Enabled}}badge-success{{else}}badge-error{{end}}">{{if .Enabled}}enabled{{else}}disabled{{end}}</span></td>
+                    <td>{{if .LastRun}}{{.LastRun.Format "2006-01-02 15:04"}}{{else}}never{{end}}</td>
+                </tr>
+                {{else}}
+                <tr><td colspan="4" style="text-align:center; color:var(--muted); padding:1.5rem;">No rules defined.</td></tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card" style="padding:1.25rem 1.5rem;">
+    <h2 style="margin-top:0;">Protection</h2>
+    {{if .Protection}}
+    <p style="font-size:13px; margin:0 0 0.5rem;">
+        Antispam:
+        <span class="badge {{if .Protection.AntispamEnabled}}badge-success{{else}}badge-error{{end}}">{{if .Protection.AntispamEnabled}}on{{else}}off{{end}}</span>
+        {{if .Protection.AntispamEnabled}}({{.Protection.AntispamMsgs}} msgs / {{.Protection.AntispamWindow}}s){{end}}
+        &nbsp;&middot;&nbsp;
+        Antilink:
+        <span class="badge {{if ne .Protection.AntilinkMode "off"}}badge-success{{else}}badge-error{{end}}">{{.Protection.AntilinkMode}}</span>
+        &nbsp;&middot;&nbsp;
+        Honeypot:
+        {{if .Protection.HoneypotChannel}}<code>{{.Protection.HoneypotChannel}}</code> ({{.Protection.HoneypotAction}})
+        {{else}}<span class="badge badge-error">off</span>{{end}}
+    </p>
+    {{if .Protection.FilterWords}}
+    <p style="color:var(--muted); font-size:12px; margin:0;">Filter words: <code>{{truncate .Protection.FilterWords 120}}</code></p>
+    {{end}}
+    {{else}}
+    <p style="color:var(--muted);">Unconfigured for this server. Set it up with the protect command in Discord.</p>
+    {{end}}
+</div>
+
+{{else}}
+<div class="card" style="padding:2rem; text-align:center; color:var(--muted);">
+    No guilds known yet. The dashboard mirrors appear once a server has been configured through Discord commands.
+</div>
+{{end}}
+{{end}}

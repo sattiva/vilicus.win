@@ -1,0 +1,120 @@
+{{define "content"}}
+<div class="page-header">
+    <h1>Guild Configurations</h1>
+</div>
+
+{{if .Saved}}
+<div class="msg-box">Guild configuration updated successfully.</div>
+{{end}}
+
+{{if .Imported}}
+<div class="msg-box">Config bundle imported  -  {{.Imported}} section(s) applied.</div>
+{{end}}
+
+{{if .ImportErr}}
+<div class="msg-box" style="border-color:#f87171;">{{.ImportErr}}</div>
+{{end}}
+
+<div class="table-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>Guild ID</th>
+                <th>Prefix</th>
+                <th>Log Channel</th>
+                <th>Welcome Channel</th>
+                <th>Auto Role</th>
+                <th>Updated</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .Guilds}}
+            <tr>
+                <td>{{.GuildID}}</td>
+                <td>{{.Prefix}}</td>
+                <td>{{if .LogChannelID}}{{.LogChannelID}}{{else}}None{{end}}</td>
+                <td>{{if .WelcomeChannelID}}{{.WelcomeChannelID}}{{else}}None{{end}}</td>
+                <td>{{if .AutoRoleID}}{{.AutoRoleID}}{{else}}None{{end}}</td>
+                <td>{{.UpdatedAt.Format "2006-01-02 15:04:05"}}</td>
+                <td>
+                    {{if index $.Manage .GuildID}}
+                    <button class="btn btn-sm" onclick="editGuild('{{.GuildID}}', '{{.Prefix}}', '{{.LogChannelID}}', '{{.WelcomeChannelID}}', '{{.AutoRoleID}}')">Edit</button>
+                    <a class="btn btn-sm" href="/guilds/export?guild={{.GuildID}}" style="text-decoration:none;">Export</a>
+                    {{else}}<span style="color:var(--muted);">-</span>{{end}}
+                </td>
+            </tr>
+            {{else}}
+            <tr>
+                <td colspan="7" style="text-align: center; color: var(--muted); padding: 2rem;">No registered guild configurations.</td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+</div>
+
+<div class="card" style="max-width: 520px;">
+    {{if .CanWrite}}
+    <div class="card-label" style="margin-bottom: 1.25rem; font-size: 13px;">Manage Guild Config</div>
+    {{if not .IsSuper}}
+    <p style="color:var(--muted); font-size:12px;">Saving is limited to your assigned guilds.</p>
+    {{end}}
+    <form method="POST" action="/guilds">
+        <input type="hidden" name="csrf_token" value="{{index .CSRF "guilds"}}">
+        <div class="form-group">
+            <label>Guild ID</label>
+            <input type="text" id="guild_id" name="guild_id" required>
+        </div>
+        <div class="form-group">
+            <label>Prefix</label>
+            <input type="text" id="prefix" name="prefix" value="/" required>
+        </div>
+        <div class="form-group">
+            <label>Log Channel ID</label>
+            <input type="text" id="log_channel_id" name="log_channel_id">
+        </div>
+        <div class="form-group">
+            <label>Welcome Channel ID</label>
+            <input type="text" id="welcome_channel_id" name="welcome_channel_id">
+        </div>
+        <div class="form-group">
+            <label>Auto Role ID</label>
+            <input type="text" id="auto_role_id" name="auto_role_id">
+        </div>
+        <button type="submit" class="btn">Save Configuration</button>
+    </form>
+    {{else}}
+    <p style="color:var(--muted);">Read-only access. Ask a superadmin for write permission.</p>
+    {{end}}
+</div>
+
+{{if .CanWrite}}
+<div class="card" style="max-width: 520px;">
+    <div class="card-label" style="margin-bottom: 1rem; font-size: 13px;">Import Config Bundle</div>
+    <p style="color:var(--muted); font-size:12px; margin-top:0;">Applies a previously exported <span style="font-family:var(--font-mono);">vilicus-config-*.json</span> bundle to the destination guild. Automation rules are replaced wholesale; other sections overwrite in place.</p>
+    <form method="POST" action="/guilds/import" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{index .CSRF "guilds_import"}}">
+        <div class="form-group">
+            <label>Destination Guild ID</label>
+            <input type="text" name="guild_id" required>
+        </div>
+        <div class="form-group">
+            <label>Bundle File (.json)</label>
+            <input type="file" name="bundle" accept=".json,application/json" required>
+        </div>
+        <button type="submit" class="btn">Import Bundle</button>
+    </form>
+</div>
+{{end}}
+
+<script>
+function editGuild(id, prefix, logCh, welCh, role) {
+    document.getElementById('guild_id').value = id;
+    document.getElementById('prefix').value = prefix;
+    document.getElementById('log_channel_id').value = logCh;
+    document.getElementById('welcome_channel_id').value = welCh;
+    document.getElementById('auto_role_id').value = role;
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+}
+</script>
+{{end}}

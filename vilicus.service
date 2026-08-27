@@ -1,0 +1,36 @@
+[Unit]
+Description=Vilicus Discord Bot & Admin Service
+After=network.target
+
+[Service]
+Type=simple
+User=vilicus
+Group=vilicus
+WorkingDirectory=/opt/vilicus
+ExecStart=/opt/vilicus/vilicus
+Restart=always
+RestartSec=5s
+LimitNOFILE=65535
+EnvironmentFile=/opt/vilicus/.env
+
+# Hardening: the process needs write access only to its own
+# data dir; everything else is read-only or invisible. MemoryMax keeps a
+# runaway feature from evicting the rest of a small VPS.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/var/lib/vilicus
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=yes
+RestrictRealtime=yes
+LockPersonality=yes
+MemoryMax=256M
+
+[Install]
+WantedBy=multi-user.target

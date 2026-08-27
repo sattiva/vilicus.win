@@ -1,0 +1,46 @@
+{{define "content"}}
+<div class="page-header">
+    <h1>Global Bot Settings</h1>
+</div>
+
+{{if .Saved}}
+<div class="msg-box">Global settings updated and presence refreshed.</div>
+{{end}}
+
+<div class="card" style="max-width: 580px;">
+    <div class="card-label" style="margin-bottom: 1.5rem; font-size: 13px;">Appearance & Identity</div>
+    {{if .IsSuper}}
+    <form method="POST" action="/settings">
+        <input type="hidden" name="csrf_token" value="{{index .CSRF "settings"}}">
+        <div class="form-group">
+            <label>Bot Display Name</label>
+            <input type="text" name="bot_name" value="{{.Settings.BotName}}" required>
+        </div>
+        <div class="form-group">
+            <label>Accent Color (Hex / 0xFormat)</label>
+            <input type="text" name="accent_color" value="{{.Settings.AccentColor}}" required>
+        </div>
+        <div class="form-group">
+            <label>Global Response Footer Text</label>
+            <input type="text" name="footer_text" value="{{.Settings.FooterText}}">
+        </div>
+        <div class="form-group">
+            <label>Activity Type</label>
+            <select name="activity_type">
+                <option value="Playing" {{if eq .Settings.ActivityType "Playing"}}selected{{end}}>Playing</option>
+                <option value="Watching" {{if eq .Settings.ActivityType "Watching"}}selected{{end}}>Watching</option>
+                <option value="Listening" {{if eq .Settings.ActivityType "Listening"}}selected{{end}}>Listening</option>
+                <option value="Competing" {{if eq .Settings.ActivityType "Competing"}}selected{{end}}>Competing</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Activity Status Text</label>
+            <input type="text" name="activity_name" value="{{.Settings.ActivityName}}">
+        </div>
+        <button type="submit" class="btn">Update Settings</button>
+    </form>
+    {{else}}
+    <p style="color:var(--muted);">Bot-wide settings are managed by superadmins.</p>
+    {{end}}
+</div>
+{{end}}
